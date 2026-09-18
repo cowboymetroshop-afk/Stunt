@@ -2,6 +2,11 @@
    PITBIKE STUNT SIMULATOR 3D
    ============================================================ */
 
+/* Фолбэк: если тач-устройство — показываем кнопки через класс */
+if(('ontouchstart' in window) || navigator.maxTouchPoints > 0){
+  document.documentElement.classList.add('is-touch');
+}
+
 /* ============ ТЕКСТУРЫ ============ */
 function makeCanvasTexture(size, drawFn, repeatX=1, repeatY=1){
   const c = document.createElement('canvas');
@@ -147,9 +152,10 @@ try{
 }catch(e){}
 
 /* ============================================================
-   ДОРОГА
+   ДОРОГА — ДЛИННАЯ + ЗАЦИКЛЕННАЯ
    ============================================================ */
-const WORLD_LEN = 2400;
+const WORLD_LEN = 12000;
+const LOOP_LEN = WORLD_LEN;
 const ROAD_HALF = 3.5;
 const SEG_LEN = 6;
 const N_SEGS = WORLD_LEN / SEG_LEN;
@@ -168,6 +174,15 @@ function buildRoadPath(){
     const yaw = curve * 0.35;
     roadPoints.push({ x, z, y: hill, yaw,
       dirX: Math.sin(yaw), dirZ: Math.cos(yaw) });
+  }
+  if(roadPoints.length > 1){
+    const first = roadPoints[0];
+    const last = roadPoints[roadPoints.length-1];
+    last.x = first.x;
+    last.y = first.y;
+    last.yaw = first.yaw;
+    last.dirX = first.dirX;
+    last.dirZ = first.dirZ;
   }
 }
 buildRoadPath();
@@ -496,7 +511,7 @@ const COLORS = [
   { id:'chrome', name:'ХРОМ',     hex:0xcccccc, price:1000, metal:1 }
 ];
 
-const SAVE_KEY = 'pitbike3d_save_v3';
+const SAVE_KEY = 'pitbike3d_save_v4';
 let save = {
   coins: 0,
   ownedBikes: ['stock'],
@@ -508,9 +523,19 @@ let save = {
 };
 try{
   const raw = localStorage.getItem(SAVE_KEY);
-  if(raw) Object.assign(save, JSON.parse(raw));
+  if(raw){
+    const parsed = JSON.parse(raw);
+    Object.assign(save, parsed);
+    if(save.coins < 0) save.coins = 0;
+    if(!Array.isArray(save.ownedBikes)) save.ownedBikes = ['stock'];
+    if(!Array.isArray(save.ownedColors)) save.ownedColors = ['red'];
+    if(!save.ownedBikes.includes('stock')) save.ownedBikes.push('stock');
+    if(!save.ownedColors.includes('red')) save.ownedColors.push('red');
+  }
 }catch(e){}
+
 function writeSave(){
+  if(save.coins < 0) save.coins = 0;
   try{ localStorage.setItem(SAVE_KEY, JSON.stringify(save)); }catch(e){}
 }
 function getBikeStats(){
@@ -556,7 +581,9 @@ const PITCH_MIN = -0.10;
 const PITCH_MAX = 1.85;
 const PITCH_CRASH_MAX = 2.10;
 const PITCH_CRASH_MIN = -0.30;
-const STUNT_EXIT_THRESHOLD = 0.06;   // при выравнивании до этого угла выходим из станта
+const STUNT_EXIT_THRESHOLD = 0.06;
+
+let cameraMode = 'third';
 
 const keys = { gas:false, brake:false, left:false, right:false };
 let paused = false;
@@ -610,6 +637,10 @@ addEventListener('keydown', e=>{
       if(!paused && !shopOpen && !graphicsOpen) doJump();
       break;
 
+    case 'KeyV':
+      if(!paused && !shopOpen && !graphicsOpen) toggleView();
+      break;
+
     case 'KeyQ': if(bike.stuntMode) doTrick('WHEELIE'); break;
     case 'KeyE': if(bike.stuntMode) doTrick('STOPPIE'); break;
     case 'KeyZ': if(bike.stuntMode) doTrick('NO-HANDER'); break;
@@ -634,7 +665,7 @@ addEventListener('keyup', e=>{
 });
 
 /* ============================================================
-   ВВОД — ТАЧ-КНОПКИ
+   ВВОД — ТАЧ
    ============================================================ */
 function bindTouchBtn(el, onDown, onUp){
   if(!el) return;
@@ -643,7 +674,6 @@ function bindTouchBtn(el, onDown, onUp){
   el.addEventListener('touchstart', start, {passive:false});
   el.addEventListener('touchend', end, {passive:false});
   el.addEventListener('touchcancel', end, {passive:false});
-  // для отладки на ПК с мышью
   el.addEventListener('mousedown', start);
   el.addEventListener('mouseup', end);
   el.addEventListener('mouseleave', end);
@@ -652,49 +682,33 @@ function bindTouchBtn(el, onDown, onUp){
 document.querySelectorAll('#touch .tbtn').forEach(btn=>{
   const key = btn.dataset.key;
   switch(key){
-    case 'gas':
-      bindTouchBtn(btn, ()=>keys.gas=true, ()=>keys.gas=false);
-      break;
-    case 'brake':
-      bindTouchBtn(btn, ()=>keys.brake=true, ()=>keys.brake=false);
-      break;
-    case 'left':
-      bindTouchBtn(btn, ()=>keys.left=true, ()=>keys.left=false);
-      break;
-    case 'right':
-      bindTouchBtn(btn, ()=>keys.right=true, ()=>keys.right=false);
-      break;
-    case 'stunt':
-      bindTouchBtn(btn, ()=>{
-        if(!paused && !shopOpen && !graphicsOpen) toggleStunt();
-      });
-      break;
-    case 'jump':
-      bindTouchBtn(btn, ()=>{
-        if(!paused && !shopOpen && !graphicsOpen) doJump();
-      });
-      break;
-    case 'wheelie':
-      bindTouchBtn(btn, ()=>{ if(bike.stuntMode) doTrick('WHEELIE'); });
-      break;
-    case 'stoppie':
-      bindTouchBtn(btn, ()=>{ if(bike.stuntMode) doTrick('STOPPIE'); });
-      break;
-    case 'nohander':
-      bindTouchBtn(btn, ()=>{ if(bike.stuntMode) doTrick('NO-HANDER'); });
-      break;
-    case 'nofooter':
-      bindTouchBtn(btn, ()=>{ if(bike.stuntMode) doTrick('NO-FOOTER'); });
-      break;
+    case 'gas':      bindTouchBtn(btn, ()=>keys.gas=true,   ()=>keys.gas=false); break;
+    case 'brake':    bindTouchBtn(btn, ()=>keys.brake=true, ()=>keys.brake=false); break;
+    case 'left':     bindTouchBtn(btn, ()=>keys.left=true,  ()=>keys.left=false); break;
+    case 'right':    bindTouchBtn(btn, ()=>keys.right=true, ()=>keys.right=false); break;
+    case 'stunt':    bindTouchBtn(btn, ()=>{ if(!paused && !shopOpen && !graphicsOpen) toggleStunt(); }); break;
+    case 'jump':     bindTouchBtn(btn, ()=>{ if(!paused && !shopOpen && !graphicsOpen) doJump(); }); break;
+    case 'view':     bindTouchBtn(btn, ()=>{ if(!paused && !shopOpen && !graphicsOpen) toggleView(); }); break;
+    case 'wheelie':  bindTouchBtn(btn, ()=>{ if(bike.stuntMode) doTrick('WHEELIE'); }); break;
+    case 'stoppie':  bindTouchBtn(btn, ()=>{ if(bike.stuntMode) doTrick('STOPPIE'); }); break;
+    case 'nohander': bindTouchBtn(btn, ()=>{ if(bike.stuntMode) doTrick('NO-HANDER'); }); break;
+    case 'nofooter': bindTouchBtn(btn, ()=>{ if(bike.stuntMode) doTrick('NO-FOOTER'); }); break;
   }
 });
 
-/* Кнопка меню на телефоне */
 menuBtn.onclick = ()=>{
   if(shopOpen) closeShop();
   else if(graphicsOpen) closeGraphics();
   else togglePause();
 };
+
+/* ============================================================
+   ВИД
+   ============================================================ */
+function toggleView(){
+  cameraMode = (cameraMode === 'third') ? 'first' : 'third';
+  showMsg(cameraMode === 'first' ? 'ВИД: ОТ ПЕРВОГО ЛИЦА' : 'ВИД: СЗАДИ-СЛЕВА');
+}
 
 /* ============================================================
    СТАНТ
@@ -729,10 +743,8 @@ function toggleStunt(){
   }
 }
 
-/* Авто-выход из станта при выравнивании на 2 колеса (без падения) */
 function autoExitStunt(){
   if(!bike.stuntMode) return;
-  // Если нос опустился почти до горизонтали — плавно выходим в обычный режим
   if(bike.pitch <= STUNT_EXIT_THRESHOLD && bike.pitchVel <= 0){
     bike.stuntMode = false;
     balanceWrap.classList.remove('active');
@@ -804,10 +816,12 @@ function showCombo(t){
 }
 function addCoins(n){
   save.coins += n;
+  if(save.coins < 0) save.coins = 0;
   writeSave();
   updateCoinsUI();
 }
 function updateCoinsUI(){
+  if(save.coins < 0) save.coins = 0;
   coinsTxt.textContent = save.coins;
   shopCoinsEl.textContent = save.coins;
   menuCoinsEl.textContent = save.coins;
@@ -830,6 +844,7 @@ function crash(reason){
   updateStuntButtonVisual();
   const penalty = Math.min(save.coins, 20);
   save.coins -= penalty;
+  if(save.coins < 0) save.coins = 0;
   writeSave();
   updateCoinsUI();
 }
@@ -856,8 +871,10 @@ function resetBike(){
    ФИЗИКА
    ============================================================ */
 function getRoadHeightAt(z){
-  const i = Math.max(0, Math.min(roadPoints.length-2, Math.floor(z / SEG_LEN)));
-  const t = (z - i*SEG_LEN) / SEG_LEN;
+  let zz = z % LOOP_LEN;
+  if(zz < 0) zz += LOOP_LEN;
+  const i = Math.max(0, Math.min(roadPoints.length-2, Math.floor(zz / SEG_LEN)));
+  const t = (zz - i*SEG_LEN) / SEG_LEN;
   return roadPoints[i].y * (1-t) + roadPoints[i+1].y * t;
 }
 
@@ -876,33 +893,25 @@ function update(dt){
     return;
   }
 
-  /* --- разгон / тормоз --- */
   if(!bike.stuntMode){
     if(keys.gas)   bike.speed += stats.accel * dt;
     if(keys.brake) bike.speed -= (stats.accel*1.8) * dt;
     bike.speed -= bike.speed * 0.35 * dt;
   } else {
-    /*
-       В СТАНТЕ:
-       Газ (W) — закидывает назад (нос вверх) + ПРОДОЛЖАЕТ набирать скорость
-       Тормоз (S) — клюёт вперёд + немного тормозит
-    */
     if(keys.gas){
       bike.pitchVel += 1.5 * dt;
-      bike.speed += stats.accel * 0.55 * dt;   // скорость в станте набирается медленнее
+      bike.speed += stats.accel * 0.55 * dt;
     }
     if(keys.brake){
       bike.pitchVel -= 1.8 * dt;
-      bike.speed -= 6 * dt;                    // тормоз слегка тормозит
+      bike.speed -= 6 * dt;
     }
-    // Естественное сопротивление в станте — поменьше, чтобы ехал дальше
     bike.speed -= bike.speed * 0.12 * dt;
     if(bike.speed < 3) bike.speed = 3;
     bike.stuntTime += dt;
   }
   bike.speed = Math.max(0, Math.min(bike.maxSpeed, bike.speed));
 
-  /* --- руление --- */
   const steerTarget = (keys.right?1:0) - (keys.left?1:0);
   bike.steer += (steerTarget - bike.steer) * Math.min(1, 8*dt);
 
@@ -913,9 +922,16 @@ function update(dt){
   const targetLean = bike.steer * 0.38 * spdFactor;
   bike.lean += (targetLean - bike.lean) * Math.min(1, 6*dt);
 
-  /* --- движение --- */
   bike.x += Math.sin(bike.heading) * bike.speed * dt;
   bike.z += Math.cos(bike.heading) * bike.speed * dt;
+
+  if(bike.z > LOOP_LEN){
+    bike.z -= LOOP_LEN;
+    bike.x = roadPoints[0].x;
+  }
+  if(bike.z < 0){
+    bike.z += LOOP_LEN;
+  }
 
   const roadY = getRoadHeightAt(bike.z);
 
@@ -934,7 +950,6 @@ function update(dt){
 
   bike.wheelSpin += (bike.speed / 0.42) * dt;
 
-  /* --- СТАНТ --- */
   if(bike.stuntMode){
     const restAngle = stats.balanceRest;
     const grav = stats.gravity;
@@ -958,7 +973,6 @@ function update(dt){
     const norm = (bike.pitch - PITCH_MIN) / (PITCH_MAX - PITCH_MIN);
     balanceFill.style.width = (Math.max(0, Math.min(1, norm))*100) + '%';
 
-    // Авто-выход при выравнивании на 2 колеса
     autoExitStunt();
   } else {
     bike.pitch += (0 - bike.pitch) * Math.min(1, 5*dt);
@@ -970,7 +984,6 @@ function update(dt){
     bike.stuntTime = 0;
   }
 
-  /* --- трюки --- */
   if(bike.trickTimer > 0){
     bike.trickTimer -= dt;
     if(bike.trickName === 'NO-HANDER'){
@@ -1015,11 +1028,7 @@ function applyTransforms(){
   }
   liftY = Math.min(liftY, 0.40);
 
-  trickPivot.position.set(
-    REAR_AXLE.x,
-    REAR_AXLE.y + liftY,
-    REAR_AXLE.z
-  );
+  trickPivot.position.set(REAR_AXLE.x, REAR_AXLE.y + liftY, REAR_AXLE.z);
   trickPivot.rotation.x = theta;
 
   frontWheel.rotation.x = -bike.wheelSpin;
@@ -1035,36 +1044,115 @@ function applyTransforms(){
   legR.rotation.z =  0.1 + bike.noFooterAmt * 1.2;
   legL.rotation.x = 0.55 + bike.noFooterAmt * 0.5;
   legR.rotation.x = 0.55 + bike.noFooterAmt * 0.5;
+
+  /* В первом лице прячем шлем, визир и торс — камера стоит
+     в их точке, чтобы не мешали обзору. Руль, руки, бак — видны. */
+  const fpv = (cameraMode === 'first');
+  torso.visible  = !fpv;
+  helmet.visible = !fpv;
+  visor.visible  = !fpv;
 }
 
 /* ============================================================
-   КАМЕРА
+   КАМЕРА (третье лицо / первое лицо ОТ ЛИЦА водителя)
    ============================================================ */
-const camOffset = new THREE.Vector3(-4.5, 3.2, -6.5);
-const camLookOffset = new THREE.Vector3(0, 1.2, 1.5);
-const camSmooth = new THREE.Vector3(camOffset.x, camOffset.y, camOffset.z);
+const camOffsetThird = new THREE.Vector3(-4.5, 3.2, -6.5);
+const camLookThird = new THREE.Vector3(0, 1.2, 1.5);
+
+/*
+   Первое лицо — от ЛИЦА водителя:
+   - camEyeHeight ≈ 1.95 — уровень глаз водителя (шлем на 1.9)
+   - camEyeZ = -0.30 — позади центра байка, чтобы руль (z=0.62)
+     был ВИДЕН в нижней части кадра перед глазами
+   - camEyeX = 0 — по центру сидения
+*/
+const camEyeHeight = 1.95;
+const camEyeZ = -0.30;
+const camEyeX = 0;
+
+const camSmooth = new THREE.Vector3(
+  camOffsetThird.x, camOffsetThird.y, camOffsetThird.z
+);
 
 function updateCamera(dt){
   const cos = Math.cos(bike.heading), sin = Math.sin(bike.heading);
-  const ox = camOffset.x * cos + camOffset.z * sin;
-  const oz = -camOffset.x * sin + camOffset.z * cos;
 
-  const shakeX = Math.sin(bike.bob*2.3) * Math.min(0.08, bike.speed*0.005);
-  const shakeY = Math.cos(bike.bob*3.1) * Math.min(0.05, bike.speed*0.003);
+  if(cameraMode === 'third'){
+    /* ---------- ТРЕТЬЕ ЛИЦО ---------- */
+    const ox = camOffsetThird.x * cos + camOffsetThird.z * sin;
+    const oz = -camOffsetThird.x * sin + camOffsetThird.z * cos;
 
-  const targetPos = new THREE.Vector3(
-    bike.x + ox + shakeX,
-    bike.y + camOffset.y + shakeY,
-    bike.z + oz
-  );
+    const shakeX = Math.sin(bike.bob*2.3) * Math.min(0.08, bike.speed*0.005);
+    const shakeY = Math.cos(bike.bob*3.1) * Math.min(0.05, bike.speed*0.003);
 
-  camSmooth.lerp(targetPos, Math.min(1, 6*dt));
-  camera.position.copy(camSmooth);
+    const targetPos = new THREE.Vector3(
+      bike.x + ox + shakeX,
+      bike.y + camOffsetThird.y + shakeY,
+      bike.z + oz
+    );
 
-  const lookX = bike.x + camLookOffset.x;
-  const lookY = bike.y + camLookOffset.y + bike.pitch*0.3;
-  const lookZ = bike.z + camLookOffset.z;
-  camera.lookAt(lookX, lookY, lookZ);
+    camSmooth.lerp(targetPos, Math.min(1, 6*dt));
+    camera.position.copy(camSmooth);
+
+    const lookX = bike.x + camLookThird.x;
+    const lookY = bike.y + camLookThird.y + bike.pitch*0.3;
+    const lookZ = bike.z + camLookThird.z;
+    camera.lookAt(lookX, lookY, lookZ);
+  } else {
+    /* ---------- ПЕРВОЕ ЛИЦО ОТ ЛИЦА ВОДИТЕЛЯ ---------- */
+
+    // Мягкая тряска от скорости
+    const shakeX = Math.sin(bike.bob*2.5) * Math.min(0.03, bike.speed*0.002);
+    const shakeY = Math.cos(bike.bob*3.3) * Math.min(0.02, bike.speed*0.0015);
+
+    // Крен камеры вместе с байком (небольшой)
+    const leanShift = Math.sin(bike.lean) * 0.12;
+
+    // Локальная позиция (в осях байка) до поворота по heading
+    const localX = camEyeX + shakeX + leanShift;
+    const localZ = camEyeZ;
+
+    // Поворот вокруг Y (heading)
+    const rx = localX * cos + localZ * sin;
+    const rz = -localX * sin + localZ * cos;
+
+    /*
+       Питч влияет на камеру:
+       - camPitchLift — поднимаем камеру когда байк задирает нос
+       - camPitchBack — отъезжаем назад, чтобы руль не вылетел
+    */
+    const pitch = bike.pitch;
+    const camPitchLift = Math.sin(pitch) * 0.55;
+    const camPitchBack = (1 - Math.cos(pitch)) * 0.9;
+
+    const backX = -Math.sin(bike.heading) * camPitchBack;
+    const backZ = -Math.cos(bike.heading) * camPitchBack;
+
+    camera.position.set(
+      bike.x + rx + backX,
+      bike.y + camEyeHeight + camPitchLift + shakeY,
+      bike.z + rz + backZ
+    );
+
+    /*
+       Куда смотрим:
+       - Вперёд по направлению байка
+       - Высота взгляда растёт при станте (смотришь в небо)
+       - Чуть-чуть вниз, чтобы видеть руль в нижней части кадра
+    */
+    const lookDist = 12;
+    const baseLookY = 1.45;                        // базовый взгляд — уровень руля
+    const lookPitchLift = Math.sin(pitch) * 6.0;   // взгляд уходит вверх в станте
+
+    const lookX = bike.x + Math.sin(bike.heading) * lookDist;
+    const lookZ = bike.z + Math.cos(bike.heading) * lookDist;
+    const lookY = bike.y + baseLookY + lookPitchLift;
+
+    camera.lookAt(lookX, lookY, lookZ);
+
+    // Лёгкий крен головы в повороте
+    camera.rotation.z += bike.lean * 0.12;
+  }
 }
 
 /* ============================================================
@@ -1158,10 +1246,28 @@ function renderShop(tab){
   else if(tab === 'colors') renderColors();
 }
 
+function tryBuyBike(b){
+  if(save.ownedBikes.includes(b.id)) return;
+  if(b.price > save.coins){
+    showCombo('НЕ ХВАТАЕТ ' + (b.price - save.coins) + ' 💰');
+    return;
+  }
+  save.coins -= b.price;
+  if(save.coins < 0) save.coins = 0;
+  save.ownedBikes.push(b.id);
+  save.currentBike = b.id;
+  writeSave();
+  updateCoinsUI();
+  applyBikeSkin();
+  renderBikes();
+  showCombo('КУПЛЕНО: ' + b.name);
+}
+
 function renderBikes(){
   BIKES.forEach(b => {
     const owned = save.ownedBikes.includes(b.id);
     const active = save.currentBike === b.id;
+    const enough = save.coins >= b.price;
     const el = document.createElement('div');
     el.className = 'shop-item' + (owned ? ' owned' : '') + (active ? ' active' : '');
     el.innerHTML = `
@@ -1182,14 +1288,9 @@ function renderBikes(){
     } else if(owned){
       btn.textContent = 'ВЫБРАТЬ'; btn.className = 'use';
       btn.onclick = ()=>{ save.currentBike = b.id; writeSave(); applyBikeSkin(); renderBikes(); };
-    } else if(save.coins >= b.price){
+    } else if(enough){
       btn.textContent = 'КУПИТЬ'; btn.className = 'buy';
-      btn.onclick = ()=>{
-        save.coins -= b.price;
-        save.ownedBikes.push(b.id);
-        save.currentBike = b.id;
-        writeSave(); updateCoinsUI(); applyBikeSkin(); renderBikes();
-      };
+      btn.onclick = ()=> tryBuyBike(b);
     } else {
       btn.textContent = 'НЕ ХВАТАЕТ'; btn.disabled = true;
     }
@@ -1197,10 +1298,28 @@ function renderBikes(){
   });
 }
 
+function tryBuyColor(c){
+  if(save.ownedColors.includes(c.id)) return;
+  if(c.price > save.coins){
+    showCombo('НЕ ХВАТАЕТ ' + (c.price - save.coins) + ' 💰');
+    return;
+  }
+  save.coins -= c.price;
+  if(save.coins < 0) save.coins = 0;
+  save.ownedColors.push(c.id);
+  save.currentColor = c.id;
+  writeSave();
+  updateCoinsUI();
+  applyBikeSkin();
+  renderColors();
+  showCombo('КУПЛЕНО: ' + c.name);
+}
+
 function renderColors(){
   COLORS.forEach(c => {
     const owned = save.ownedColors.includes(c.id);
     const active = save.currentColor === c.id;
+    const enough = save.coins >= c.price;
     const el = document.createElement('div');
     el.className = 'shop-item' + (owned ? ' owned' : '') + (active ? ' active' : '');
     el.innerHTML = `
@@ -1215,14 +1334,9 @@ function renderColors(){
     } else if(owned){
       btn.textContent = 'ВЫБРАТЬ'; btn.className = 'use';
       btn.onclick = ()=>{ save.currentColor = c.id; writeSave(); applyBikeSkin(); renderColors(); };
-    } else if(save.coins >= c.price){
+    } else if(enough){
       btn.textContent = 'КУПИТЬ'; btn.className = 'buy';
-      btn.onclick = ()=>{
-        save.coins -= c.price;
-        save.ownedColors.push(c.id);
-        save.currentColor = c.id;
-        writeSave(); updateCoinsUI(); applyBikeSkin(); renderColors();
-      };
+      btn.onclick = ()=> tryBuyColor(c);
     } else {
       btn.textContent = 'НЕ ХВАТАЕТ'; btn.disabled = true;
     }
