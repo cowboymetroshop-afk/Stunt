@@ -32,14 +32,14 @@
 <div id="controls">
   <div><b>W</b> газ / в станте — назад &nbsp; <b>S</b> тормоз / в станте — вперёд</div>
   <div><b>A</b> налево &nbsp; <b>D</b> направо</div>
-  <div><b>SHIFT</b> стант &nbsp; <b>ПРОБЕЛ</b> прыжок</div>
+  <div><b>SHIFT</b> стант &nbsp; <b>ПРОБЕЛ</b> прыжок &nbsp; <b>V</b> вид</div>
   <div><b>Q</b> wheelie &nbsp; <b>E</b> stoppie &nbsp; <b>Z</b> no-hander &nbsp; <b>X</b> no-footer</div>
   <div><b>R</b> сброс &nbsp; <b>ESC</b> меню</div>
 </div>
 
 <div id="fps">-- FPS</div>
 
-<!-- ============ ТАЧ-КНОПКИ (показываются только на телефонах/планшетах) ============ -->
+<!-- ============ ТАЧ-КНОПКИ ============ -->
 <div id="touch">
   <div id="touchLeft">
     <button class="tbtn" data-key="left">◀</button>
@@ -47,6 +47,7 @@
   </div>
 
   <div id="touchCenter">
+    <button class="tbtn tbtnSmall" data-key="view">ВИД</button>
     <button class="tbtn tbtnSmall" data-key="jump">ПРЫЖОК</button>
     <button class="tbtn tbtnStunt" data-key="stunt">СТАНТ</button>
     <div id="touchTricks">
@@ -116,6 +117,7 @@
   <div>
     <h2>PITBIKE STUNT 3D</h2>
     <p><b>SHIFT</b> — стант (вкл/выкл)</p>
+    <p><b>V</b> — переключить вид (третье / первое лицо)</p>
     <p><b>W</b> газ, <b>S</b> тормоз, <b>A/D</b> руление</p>
     <p>В станте: <b>W</b> — назад, <b>S</b> — вперёд (выравнивает)</p>
     <p><b>Q/E/Z/X</b> — трюки • <b>ПРОБЕЛ</b> — прыжок</p>
@@ -123,10 +125,9 @@
   </div>
 </div>
 
-<!-- Кнопка открытия меню на телефоне -->
 <button id="menuBtn" title="Меню">☰</button>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
 <script src="script.js"></script>
 
 </body>
