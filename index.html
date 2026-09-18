@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
+<title>PitBike Stunt Simulator 3D</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="hud">
+  <div id="speed">0 <small>км/ч</small></div>
+  <div class="row">Передача: <span id="gear">N</span></div>
+  <div class="row">Состояние: <span id="state">Едем прямо</span></div>
+  <div class="row">Монеты: <span id="coins">0</span></div>
+</div>
+
+<div id="stuntBadge">СТАНТ</div>
+
+<div id="balanceWrap">
+  <div id="balanceBar">
+    <div id="balanceFill"></div>
+    <div class="safe"></div>
+    <div class="center"></div>
+  </div>
+  <div class="lbl">БАЛАНС • держи в зелёной зоне</div>
+</div>
+
+<div id="bigMsg"></div>
+<div id="comboMsg"></div>
+
+<div id="controls">
+  <div><b>W</b> газ / в станте — назад &nbsp; <b>S</b> тормоз / в станте — вперёд</div>
+  <div><b>A</b> налево &nbsp; <b>D</b> направо</div>
+  <div><b>SHIFT</b> стант &nbsp; <b>ПРОБЕЛ</b> прыжок</div>
+  <div><b>Q</b> wheelie &nbsp; <b>E</b> stoppie &nbsp; <b>Z</b> no-hander &nbsp; <b>X</b> no-footer</div>
+  <div><b>R</b> сброс &nbsp; <b>ESC</b> меню</div>
+</div>
+
+<div id="fps">-- FPS</div>
+
+<!-- ============ ТАЧ-КНОПКИ (показываются только на телефонах/планшетах) ============ -->
+<div id="touch">
+  <div id="touchLeft">
+    <button class="tbtn" data-key="left">◀</button>
+    <button class="tbtn" data-key="brake">ТОРМ</button>
+  </div>
+
+  <div id="touchCenter">
+    <button class="tbtn tbtnSmall" data-key="jump">ПРЫЖОК</button>
+    <button class="tbtn tbtnStunt" data-key="stunt">СТАНТ</button>
+    <div id="touchTricks">
+      <button class="tbtn tbtnTrick" data-key="wheelie">WHL</button>
+      <button class="tbtn tbtnTrick" data-key="stoppie">STP</button>
+      <button class="tbtn tbtnTrick" data-key="nohander">NH</button>
+      <button class="tbtn tbtnTrick" data-key="nofooter">NF</button>
+    </div>
+  </div>
+
+  <div id="touchRight">
+    <button class="tbtn" data-key="gas">ГАЗ</button>
+    <button class="tbtn" data-key="right">▶</button>
+  </div>
+</div>
+
+<!-- МЕНЮ -->
+<div id="menu" class="overlay">
+  <div class="menu-box">
+    <h1>ПАУЗА</h1>
+    <button class="menu-btn" data-act="resume">▶ ПРОДОЛЖИТЬ</button>
+    <button class="menu-btn" data-act="shop">🛒 МАГАЗИН</button>
+    <button class="menu-btn" data-act="graphics">⚙ ГРАФИКА</button>
+    <button class="menu-btn" data-act="reset">⟳ СБРОС БАЙКА</button>
+    <button class="menu-btn danger" data-act="resetProgress">⚠ СБРОСИТЬ ПРОГРЕСС</button>
+    <div class="menu-stats">
+      <div>Монет: <b id="menuCoins">0</b></div>
+      <div>Трюков: <b id="menuTricks">0</b></div>
+      <div>Макс. стант: <b id="menuStuntTime">0с</b></div>
+      <div>Графика: <b id="menuPreset">Высокая</b></div>
+    </div>
+    <div class="menu-hint">ESC — продолжить</div>
+  </div>
+</div>
+
+<!-- МАГАЗИН -->
+<div id="shop" class="overlay">
+  <div class="menu-box wide">
+    <h1>МАГАЗИН</h1>
+    <div class="shop-coins">💰 <b id="shopCoins">0</b></div>
+    <div class="shop-tabs">
+      <button class="tab active" data-tab="bikes">🏍 БАЙКИ</button>
+      <button class="tab" data-tab="colors">🎨 ЦВЕТА</button>
+    </div>
+    <div id="shopContent"></div>
+    <button class="menu-btn" data-act="closeShop">◀ НАЗАД</button>
+  </div>
+</div>
+
+<!-- ГРАФИКА -->
+<div id="graphics" class="overlay">
+  <div class="menu-box">
+    <h1>ГРАФИКА</h1>
+    <div id="presetList">
+      <button class="menu-btn preset-btn" data-preset="verylow">🔻 ОЧЕНЬ НИЗКАЯ</button>
+      <button class="menu-btn preset-btn" data-preset="low">🔽 НИЗКАЯ</button>
+      <button class="menu-btn preset-btn" data-preset="medium">▶ СРЕДНЯЯ</button>
+      <button class="menu-btn preset-btn" data-preset="high">🔼 ВЫСОКАЯ</button>
+      <button class="menu-btn preset-btn" data-preset="veryhigh">🔺 ОЧЕНЬ ВЫСОКАЯ</button>
+    </div>
+    <div class="menu-hint">Применяется мгновенно и сохраняется</div>
+    <button class="menu-btn" data-act="closeGraphics">◀ НАЗАД</button>
+  </div>
+</div>
+
+<div id="startHint">
+  <div>
+    <h2>PITBIKE STUNT 3D</h2>
+    <p><b>SHIFT</b> — стант (вкл/выкл)</p>
+    <p><b>W</b> газ, <b>S</b> тормоз, <b>A/D</b> руление</p>
+    <p>В станте: <b>W</b> — назад, <b>S</b> — вперёд (выравнивает)</p>
+    <p><b>Q/E/Z/X</b> — трюки • <b>ПРОБЕЛ</b> — прыжок</p>
+    <p><b>ESC</b> — меню</p>
+  </div>
+</div>
+
+<!-- Кнопка открытия меню на телефоне -->
+<button id="menuBtn" title="Меню">☰</button>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="script.js"></script>
+
+</body>
+</html>
