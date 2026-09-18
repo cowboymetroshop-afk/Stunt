@@ -78,8 +78,7 @@ canvas{display:block;}
   opacity:.8;z-index:10;}
 
 /* ============ ТАЧ-КНОПКИ ============ */
-#touch{position:absolute;inset:0;z-index:15;pointer-events:none;
-  display:none;}
+#touch{position:absolute;inset:0;z-index:15;pointer-events:none;display:none;}
 #touch > div{position:absolute;bottom:16px;
   display:flex;gap:14px;pointer-events:none;}
 #touchLeft{left:16px;align-items:flex-end;}
@@ -107,6 +106,10 @@ canvas{display:block;}
   background:radial-gradient(circle at 35% 30%,rgba(0,255,255,.35),rgba(0,30,50,.6));}
 .tbtnSmall.pressed{background:radial-gradient(circle at 35% 30%,rgba(0,255,255,.7),rgba(0,100,150,.6));}
 
+.tbtnSmall[data-key="view"]{
+  border-color:#a0a0ff;color:#a0a0ff;
+  background:radial-gradient(circle at 35% 30%,rgba(160,160,255,.3),rgba(20,20,60,.6));}
+
 .tbtnStunt{width:88px;height:88px;font-size:14px;
   border-color:#ffcc00;color:#ffcc00;
   background:radial-gradient(circle at 35% 30%,rgba(255,220,0,.4),rgba(120,30,0,.6));
@@ -130,6 +133,12 @@ canvas{display:block;}
   display:none;align-items:center;justify-content:center;
   text-shadow:0 0 8px #0ff;
   -webkit-tap-highlight-color:transparent;}
+
+/* Показ тач-кнопок */
+html.is-touch #touch{display:block !important;}
+html.is-touch #controls{display:none !important;}
+html.is-touch #menuBtn{display:flex !important;}
+html.is-touch #fps{display:none !important;}
 
 .overlay{position:fixed;inset:0;z-index:100;
   background:rgba(0,0,0,.75);backdrop-filter:blur(8px);
@@ -246,14 +255,14 @@ canvas{display:block;}
   margin:6px 0;letter-spacing:1px;}
 #startHint b{color:#ffe000;}
 
-/* ============ МОБИЛЬНЫЕ ============ */
-@media (hover:none) and (pointer:coarse){
+/* ============ МОБИЛЬНЫЕ (фолбэк через медиа) ============ */
+@media (hover:none), (pointer:coarse){
   #touch{display:block;}
   #controls{display:none;}
   #menuBtn{display:flex;}
+  #fps{display:none;}
   #hud{font-size:12px;top:10px;left:14px;}
   #speed{font-size:26px;}
-  #fps{display:none;}
   #balanceWrap{top:64px;width:min(340px,80vw);}
   #stuntBadge{font-size:13px;padding:8px 18px;}
   #bigMsg{font-size:40px;}
@@ -269,7 +278,6 @@ canvas{display:block;}
   .shop-item .stats{font-size:10px;}
 }
 
-/* ============ ЛАНДШАФТ НА ТЕЛЕФОНЕ ============ */
 @media (hover:none) and (pointer:coarse) and (orientation:landscape){
   .tbtn{width:64px;height:64px;font-size:11px;}
   .tbtnSmall{width:56px;height:56px;}
